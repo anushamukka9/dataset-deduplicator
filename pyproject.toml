@@ -1,0 +1,27 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "dataset-deduplicator"
+version = "0.1.0"
+description = "Near-duplicate detection for training data: exact row hashing, MinHash/LSH text dedup, tabular near-dup clustering, chunked processing, CLI."
+readme = "README.md"
+license = { text = "MIT" }
+authors = [{ name = "Anusha Mukka" }]
+maintainers = [{ name = "Anusha Mukka" }]
+urls = { Homepage = "https://anushamukka.com", Repository = "https://github.com/anushamukka9/dataset-deduplicator" }
+requires-python = ">=3.9"
+dependencies = ["numpy>=1.22"]
+
+[project.optional-dependencies]
+dev = ["pytest>=7"]
+
+[project.scripts]
+dataset-dedup = "dataset_deduplicator.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
