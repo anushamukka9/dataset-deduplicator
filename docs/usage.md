@@ -63,7 +63,26 @@ or `--keep-longest-text review` on the CLI. Custom strategies are just callables
 }
 ```
 
-Row numbers refer to input file order. Keep this file next to the cleaned dataset — it's the provenance record for what the model never saw.
+Row numbers refer to input file order. Keep this file next to the cleaned dataset — it's the provenance record for what the model never saw. `params` records every tuning knob used (thresholds, `num_perm`, `bands`, `shingle_k`, `seed`, `chunksize`, and whether it was a dry run), so a report is fully reproducible.
+
+Prefer a human-readable version for a PR or docs page? Use Markdown:
+
+```bash
+dataset-dedup reviews.csv -o reviews.clean.csv --text-column review \
+    --report-format markdown
+```
+
+That writes `<output>.report.md` with the same content as tables. In Python:
+
+```python
+from dataset_deduplicator import render_report_markdown
+
+print(render_report_markdown(report))
+```
+
+## Dry run
+
+`--dry-run` runs the whole pipeline and writes the audit report but skips the cleaned output file: a safe way to see how many rows a threshold or a parameter choice would remove before committing to it. `deduplicate_file(..., dry_run=True)` does the same programmatically and records `"dry_run": True` in the report params.
 
 ## Large files
 
