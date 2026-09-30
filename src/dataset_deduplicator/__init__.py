@@ -7,8 +7,14 @@ distance, cluster + keep-one-per-cluster resolution with an audit report,
 and memory-efficient chunked processing for large files.
 """
 
+from .io import render_report_markdown
 from .pipeline import DatasetDeduplicator
 from .resolve import keep_first, keep_longest_text
 
-__all__ = ["DatasetDeduplicator", "keep_first", "keep_longest_text"]
+__all__ = [
+    "DatasetDeduplicator",
+    "keep_first",
+    "keep_longest_text",
+    "render_report_markdown",
+]
 __version__ = "0.1.0"
