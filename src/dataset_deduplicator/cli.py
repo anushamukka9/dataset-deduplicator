@@ -6,6 +6,7 @@ import argparse
 import json
 import sys
 
+from .io import render_report_markdown
 from .pipeline import DatasetDeduplicator
 from .resolve import keep_first, keep_longest_text
 
@@ -15,8 +16,8 @@ def build_parser() -> argparse.ArgumentParser:
         prog="dataset-dedup",
         description=(
             "Remove exact and near-duplicate rows from a CSV or JSONL dataset. "
-            "Writes the deduplicated file and a JSON audit report of every "
-            "removed row and why it was removed."
+            "Writes the deduplicated file (unless --dry-run) and an audit "
+            "report of every removed row and why it was removed."
         ),
     )
     parser.add_argument("input", help="Input .csv or .jsonl file")
@@ -29,7 +30,20 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--report",
         default=None,
-        help="Path for the JSON audit report (default: <output>.report.json)",
+        help="Path for the audit report (default: <output>.report.json "
+        "or .report.md, depending on --report-format)",
+    )
+    parser.add_argument(
+        "--report-format",
+        default="json",
+        choices=["json", "markdown"],
+        help="Audit report format (default: json)",
+    )
+    parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Run the full pipeline and write the audit report, but do not "
+        "write the cleaned output file",
     )
     parser.add_argument(
         "--text-column",
@@ -43,6 +57,24 @@ def build_parser() -> argparse.ArgumentParser:
         default=0.8,
         help="Jaccard similarity >= threshold counts as a near-duplicate "
         "text (default: 0.8)",
+    )
+    parser.add_argument(
+        "--shingle-k",
+        type=int,
+        default=5,
+        help="Character shingle length for MinHash/LSH (default: 5)",
+    )
+    parser.add_argument(
+        "--num-perm",
+        type=int,
+        default=128,
+        help="MinHash permutations per signature (default: 128)",
+    )
+    parser.add_argument(
+        "--bands",
+        type=int,
+        default=16,
+        help="LSH bands per signature (default: 16)",
     )
     parser.add_argument(
         "--tabular-max-distance",
@@ -98,12 +130,22 @@ def main(argv: list[str] | None = None) -> int:
             else None
         ),
         keep_strategy=strategy,
+        num_perm=args.num_perm,
+        bands=args.bands,
+        shingle_k=args.shingle_k,
     )
 
-    report_path = args.report or f"{args.output}.report.json"
+    ext = "md" if args.report_format == "markdown" else "json"
+    report_path = args.report or f"{args.output}.report.{ext}"
+    # The pipeline writes JSON reports itself; for Markdown we render here.
     report = deduper.deduplicate_file(
-        args.input, args.output, report_path, chunksize=args.chunksize
+        args.input, args.output,
+        report_path if args.report_format == "json" else None,
+        chunksize=args.chunksize, dry_run=args.dry_run,
     )
+    if args.report_format == "markdown":
+        with open(report_path, "w", encoding="utf-8") as fh:
+            fh.write(render_report_markdown(report))
 
     summary = (
         f"rows: {report['total_rows']} -> {report['kept_rows']} kept, "
@@ -112,7 +154,10 @@ def main(argv: list[str] | None = None) -> int:
     )
     if not args.quiet:
         print(summary)
-        print(f"cleaned file: {args.output}")
+        if args.dry_run:
+            print("dry run: cleaned file not written")
+        else:
+            print(f"cleaned file: {args.output}")
         print(f"audit report: {report_path}")
         for reason, count in report["removed_by_reason"].items():
             print(f"  {count:4d} x {reason}")
