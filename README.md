@@ -41,7 +41,17 @@ audit report: reviews.clean.csv.report.json
    287 x near-duplicate
 ```
 
-Every removed row lands in the JSON report with the row number, the surviving row, and a human-readable reason such as `near-duplicate of row 12 (text similarity 0.912)`.
+Every removed row lands in the audit report with the row number, the surviving row, and a human-readable reason such as `near-duplicate of row 12 (text similarity 0.912)`. Reports are JSON by default (`<output>.report.json`); pass `--report-format markdown` for a Markdown version (`<output>.report.md`) that renders nicely in a PR or docs page. Python callers can use `render_report_markdown(report)` from the package root.
+
+Preview a run without writing the cleaned file:
+
+```bash
+dataset-dedup reviews.csv -o reviews.clean.csv \
+  --text-column review --dry-run
+# rows: 51200 -> 49871 kept, 1329 removed (1184 clusters)
+# dry run: cleaned file not written
+# audit report: reviews.clean.csv.report.json
+```
 
 ## Python API
 
@@ -81,14 +91,19 @@ See [`examples/quickstart.py`](examples/quickstart.py) for a runnable end-to-end
 ## CLI reference
 
 ```
-dataset-dedup INPUT -o OUTPUT [--report REPORT.json]
+dataset-dedup INPUT -o OUTPUT [--report REPORT] [--report-format json|markdown]
   --text-column COL        column to scan for near-duplicate text
   --text-threshold F       Jaccard >= F counts as near-duplicate (default 0.8)
+  --shingle-k N            character shingle length for MinHash (default 5)
+  --num-perm N             MinHash permutations per signature (default 128)
+  --bands N                LSH bands per signature (default 16)
   --tabular-max-distance F normalized distance <= F counts as near-dupe (default 0.05)
   --no-tabular             disable tabular near-duplicate detection
   --numeric-columns A,B    numeric columns (default: auto-inferred)
   --keep-longest-text COL  keep the longest-text row per cluster
   --chunksize N            rows streamed per chunk (default 10000)
+  --dry-run                run the pipeline and write the report, but skip
+                           writing the cleaned file
 ```
 
 ## License
