@@ -112,6 +112,10 @@ class DatasetDeduplicator:
                 "text_threshold": self.text_threshold,
                 "tabular_max_distance": self.tabular_max_distance,
                 "numeric_columns": self.numeric_columns,
+                "num_perm": self.num_perm,
+                "bands": self.bands,
+                "shingle_k": self.shingle_k,
+                "seed": self.seed,
             },
         )
         return kept_rows, report
@@ -125,6 +129,7 @@ class DatasetDeduplicator:
         output_path: str | Path,
         report_path: str | Path | None = None,
         chunksize: int = 10_000,
+        dry_run: bool = False,
     ) -> Dict[str, Any]:
         """Stream ``input_path`` through the pipeline; write cleaned rows.
 
@@ -133,6 +138,11 @@ class DatasetDeduplicator:
         LSH indexes and resolved with the same cluster + keep-one logic as
         the in-memory pipeline. Row numbers in the report refer to the
         input file's row order.
+
+        With ``dry_run=True`` the full pipeline runs and the report is
+        still produced (and written when ``report_path`` is given), but the
+        cleaned output file is not written: a safe way to preview what
+        would be removed.
         """
         input_path, output_path = Path(input_path), Path(output_path)
         detect_format(input_path)
@@ -282,7 +292,8 @@ class DatasetDeduplicator:
 
         resolution.removed = removed
         final_rows = [rows_out[i] for i in resolution.kept]
-        write_rows(output_path, final_rows, fieldnames or None)
+        if not dry_run:
+            write_rows(output_path, final_rows, fieldnames or None)
         report = build_report(
             total_rows,
             resolution,
@@ -291,6 +302,11 @@ class DatasetDeduplicator:
                 "text_threshold": self.text_threshold,
                 "tabular_max_distance": self.tabular_max_distance,
                 "chunksize": chunksize,
+                "num_perm": self.num_perm,
+                "bands": self.bands,
+                "shingle_k": self.shingle_k,
+                "seed": self.seed,
+                "dry_run": dry_run,
             },
         )
         if report_path is not None:
