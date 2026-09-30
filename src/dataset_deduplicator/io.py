@@ -80,3 +80,50 @@ def write_report(path: str | Path, report: Dict[str, Any]) -> None:
     Path(path).parent.mkdir(parents=True, exist_ok=True)
     with open(path, "w", encoding="utf-8") as fh:
         json.dump(report, fh, indent=2, ensure_ascii=False)
+
+
+def render_report_markdown(report: Dict[str, Any]) -> str:
+    """Render an audit report dict as a human-readable Markdown document.
+
+    Mirrors the JSON report (``build_report``): summary counts, parameters,
+    removals by reason, and a table of every removed row.
+    """
+    lines = [
+        "# Dedup audit report",
+        "",
+        f"- total rows: {report['total_rows']}",
+        f"- kept rows: {report['kept_rows']}",
+        f"- removed rows: {report['removed_rows']}",
+        f"- duplicate clusters: {report['duplicate_clusters']}",
+        "",
+        "## Parameters",
+        "",
+        "| parameter | value |",
+        "| --- | --- |",
+    ]
+    for key, value in report.get("params", {}).items():
+        lines.append(f"| `{key}` | `{value}` |")
+    lines += [
+        "",
+        "## Removals by reason",
+        "",
+        "| reason | count |",
+        "| --- | --- |",
+    ]
+    for reason, count in report.get("removed_by_reason", {}).items():
+        lines.append(f"| {reason} | {count} |")
+    lines += [
+        "",
+        "## Removed rows",
+        "",
+        "| row | kept row | reason | cluster |",
+        "| --- | --- | --- | --- |",
+    ]
+    for entry in report.get("removed", []):
+        cluster = ", ".join(str(i) for i in entry["cluster"])
+        lines.append(
+            f"| {entry['row']} | {entry['kept_row']} | {entry['reason']} "
+            f"| [{cluster}] |"
+        )
+    lines.append("")
+    return "\n".join(lines)
